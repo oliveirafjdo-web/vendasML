@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <h2>Relatório de vendas e margem de contribuição</h2>
+  <form class="form-inline" method="post" action="{{ url_for('relatorio') }}">
+    <label>Início
+      <input type="date" name="inicio" value="{{ inicio or '' }}">
+    </label>
+    <label>Fim
+      <input type="date" name="fim" value="{{ fim or '' }}">
+    </label>
+    <label>Critério da curva
+      <select name="criterio">
+        <option value="faturamento" {% if criterio == 'faturamento' %}selected{% endif %}>Faturamento líquido</option>
+        <option value="margem" {% if criterio == 'margem' %}selected{% endif %}>Margem de contribuição</option>
+      </select>
+    </label>
+    <button type="submit" class="btn-primary">Filtrar</button>
+  </form>
+  <p class="hint">
+    Curva ABC:
+    A = até 80% do faturamento acumulado |
+    B = 80% a 95% |
+    C = acima de 95%.
+  </p>
+</section>
+
+<section class="card">
+{% if dados %}
+  <p>Total de faturamento <strong>líquido</strong> no período:
+    <strong>R$ {{ "%.2f"|format(total_fat_liq) }}</strong></p>
+  <p>Total de produtos com venda no período: <strong>{{ total_itens }}</strong></p>
+  <p>
+    <a class="btn-outline" href="{{ url_for('relatorio_csv', inicio=inicio, fim=fim, criterio=criterio) }}">Exportar CSV</a>
+  </p>
+  <table>
+    <thead>
+      <tr>
+        <th>Produto</th>
+        <th>Qtd</th>
+        <th>Fat. bruto</th>
+        <th>Descontos</th>
+        <th>Fat. líquido</th>
+        <th>Custo produto</th>
+        <th>Comissão</th>
+        <th>Frete</th>
+        <th>Outros custos</th>
+        <th>Custos variáveis</th>
+        <th>Margem (R$)</th>
+        <th>Margem (%)</th>
+        <th>% acum.</th>
+        <th>Curva</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for d in dados %}
+      <tr class="curva-{{ d.curva }}">
+        <td>{{ d.product_name }}</td>
+        <td>{{ d.total_qty }}</td>
+        <td>R$ {{ "%.2f"|format(d.faturamento_bruto) }}</td>
+        <td>R$ {{ "%.2f"|format(d.total_desconto) }}</td>
+        <td>R$ {{ "%.2f"|format(d.faturamento_liquido) }}</td>
+        <td>R$ {{ "%.2f"|format(d.custo_produto) }}</td>
+        <td>R$ {{ "%.2f"|format(d.total_marketplace_fee) }}</td>
+        <td>R$ {{ "%.2f"|format(d.total_shipping_cost) }}</td>
+        <td>R$ {{ "%.2f"|format(d.total_other_cost) }}</td>
+        <td>R$ {{ "%.2f"|format(d.total_custos_variaveis) }}</td>
+        <td>R$ {{ "%.2f"|format(d.margem_contrib) }}</td>
+        <td>{{ "%.2f"|format(d.margem_pct) }}%</td>
+        <td>{{ "%.1f"|format(d.perc_acumulado) }}%</td>
+        <td>{{ d.curva }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+{% else %}
+  <p>Nenhuma venda encontrada para o período informado.</p>
+{% endif %}
+</section>
+{% endblock %}
