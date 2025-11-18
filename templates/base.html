@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
   <meta charset="utf-8">
-  <title>Redutron | Controle de Vendas v2</title>
+  <title>Redutron | Controle de Vendas v3</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
@@ -16,6 +16,7 @@
       <a href="{{ url_for('listar_produtos') }}">Produtos</a>
       <a href="{{ url_for('listar_vendas') }}">Vendas</a>
       <a href="{{ url_for('relatorio') }}">Relatórios</a>
+      <a href="{{ url_for('importar_vendas') }}">Importar</a>
     </nav>
   </header>
   <main class="container">

@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <h2>Importar vendas do Mercado Livre (XLSX)</h2>
+  <p>
+    Use aqui o próprio relatório de <strong>Vendas BR</strong> baixado do Mercado Livre,
+    sem precisar editar a planilha.
+  </p>
+  <p class="hint">
+    O sistema lê automaticamente colunas como:
+    <br>• <code>SKU</code>
+    <br>• <code>Data da venda</code>
+    <br>• <code>Unidades</code>
+    <br>• <code>Preço unitário de venda do anúncio (BRL)</code>
+    <br>• <code>Tarifa de venda e impostos (BRL)</code> (usada como comissão, em valor positivo)
+  </p>
+
+  <form method="post" action="{{ url_for('importar_vendas') }}" enctype="multipart/form-data">
+    <label>Arquivo XLSX do relatório de vendas
+      <input type="file" name="arquivo" accept=".xlsx" required>
+    </label>
+    <button type="submit" class="btn-primary" style="margin-top:12px;">Importar</button>
+  </form>
+</section>
+{% endblock %}

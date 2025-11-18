@@ -214,6 +214,10 @@ tbody tr:nth-child(even) {
   color: #c7c7c7;
 }
 
+pre {
+  color: #e5e5e5;
+}
+
 @media (max-width: 640px) {
   .topbar {
     flex-direction: column;

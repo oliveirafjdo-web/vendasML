@@ -37,7 +37,6 @@ def init_db():
         )
     """)
 
-    # tenta adicionar colunas novas se a tabela já existir sem elas
     cols_to_add = [
         ("marketplace_fee", "REAL DEFAULT 0"),
         ("shipping_cost", "REAL DEFAULT 0"),

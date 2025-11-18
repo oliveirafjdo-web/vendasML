@@ -1,16 +1,18 @@
 {% extends "base.html" %}
 {% block content %}
 <section class="card">
-  <h1>Controle de Vendas Redutron v2</h1>
+  <h1>Controle de Vendas Redutron v3</h1>
   <p>
-    Versão 2.0 com cálculo de <strong>faturamento líquido</strong>,
-    <strong>custos variáveis detalhados</strong> (comissão, frete, outros) e
-    <strong>curva ABC</strong> por faturamento ou margem de contribuição.
+    Versão 3.0 com cálculo de <strong>faturamento líquido</strong>,
+    <strong>custos variáveis detalhados</strong> (comissão, frete, outros),
+    <strong>curva ABC</strong> e <strong>importação direta</strong> do relatório
+    de vendas do Mercado Livre (XLSX).
   </p>
   <div class="grid">
     <a class="btn-primary" href="{{ url_for('listar_produtos') }}">Cadastrar Produtos</a>
     <a class="btn-outline" href="{{ url_for('listar_vendas') }}">Lançar Vendas</a>
     <a class="btn-outline" href="{{ url_for('relatorio') }}">Ver Relatórios</a>
+    <a class="btn-outline" href="{{ url_for('importar_vendas') }}">Importar planilha ML</a>
   </div>
 </section>
 {% endblock %}

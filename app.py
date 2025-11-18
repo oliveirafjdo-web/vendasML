@@ -1,13 +1,15 @@
 from flask import Flask, render_template, request, redirect, url_for, send_file, flash
 import csv
 import io
+from datetime import datetime
+
+import pandas as pd
 
 from database import get_connection, init_db
 
 app = Flask(__name__)
-app.secret_key = "redutron-secret-key"  # em produção, use variável de ambiente
+app.secret_key = "redutron-secret-key"
 
-# Inicializa o banco na primeira execução
 init_db()
 
 
@@ -211,7 +213,6 @@ def calcular_relatorio(inicio, fim, criterio="faturamento"):
     if total_faturamento_liquido_geral == 0:
         return [], 0, 0
 
-    # define critério
     if criterio == "margem":
         key_fn = lambda x: x["margem_contrib"]
     else:
@@ -312,7 +313,7 @@ def relatorio_csv():
     writer.writerow(["TOTAL FATURAMENTO LÍQUIDO", f"{total_fat_liq:.2f}"])
 
     output.seek(0)
-    filename = "relatorio_vendas_v2.csv"
+    filename = "relatorio_vendas_v3.csv"
 
     return send_file(
         io.BytesIO(output.getvalue().encode("utf-8-sig")),
@@ -320,6 +321,168 @@ def relatorio_csv():
         as_attachment=True,
         download_name=filename,
     )
+
+
+# ------- IMPORTAÇÃO XLSX MERCADO LIVRE -------
+
+MESES_PT = {
+    "janeiro": 1,
+    "fevereiro": 2,
+    "março": 3,
+    "marco": 3,
+    "abril": 4,
+    "maio": 5,
+    "junho": 6,
+    "julho": 7,
+    "agosto": 8,
+    "setembro": 9,
+    "outubro": 10,
+    "novembro": 11,
+    "dezembro": 12,
+}
+
+
+def to_float(value):
+    if value is None:
+        return 0.0
+    try:
+        if isinstance(value, str):
+            v = value.strip().replace("R$", "").replace(" ", "")
+            v = v.replace(".", "").replace(",", ".")
+            return float(v) if v else 0.0
+        if pd.isna(value):
+            return 0.0
+        return float(value)
+    except Exception:
+        return 0.0
+
+
+def parse_data_ml(value):
+    if value is None or (isinstance(value, float) and pd.isna(value)):
+        return None
+    v = str(value).strip()
+    parts = v.split()
+    try:
+        dia = int(parts[0])
+        mes_nome = parts[2].lower()
+        ano = int(parts[4])
+        mes = MESES_PT.get(mes_nome)
+        if not mes:
+            return None
+        dt = datetime(ano, mes, dia)
+        return dt.strftime("%Y-%m-%d")
+    except Exception:
+        return None
+
+
+@app.route("/importar", methods=["GET", "POST"])
+def importar_vendas():
+    if request.method == "GET":
+        return render_template("import.html")
+
+    arquivo = request.files.get("arquivo")
+    if not arquivo or arquivo.filename == "":
+        flash("Nenhum arquivo selecionado.", "error")
+        return redirect(url_for("importar_vendas"))
+
+    try:
+        df = pd.read_excel(arquivo, header=5)
+    except Exception as e:
+        flash(f"Erro ao ler o arquivo XLSX: {e}", "error")
+        return redirect(url_for("importar_vendas"))
+
+    col_sku = "SKU"
+    col_data = "Data da venda"
+    col_unidades = "Unidades"
+    col_preco_unit = "Preço unitário de venda do anúncio (BRL)"
+    col_taxa_venda = "Tarifa de venda e impostos (BRL)"
+
+    registros = df.to_dict(orient="records")
+
+    conn = get_connection()
+    cur = conn.cursor()
+
+    importados = 0
+    erros = 0
+
+    for row in registros:
+        try:
+            sku = str(row.get(col_sku) or "").strip()
+            if not sku:
+                erros += 1
+                continue
+
+            data_ml = row.get(col_data)
+            data = parse_data_ml(data_ml)
+            if not data:
+                erros += 1
+                continue
+
+            quantidade = to_float(row.get(col_unidades) or 1)
+            if quantidade <= 0:
+                erros += 1
+                continue
+
+            preco_unitario = to_float(row.get(col_preco_unit) or 0)
+
+            taxa_venda = to_float(row.get(col_taxa_venda) or 0)
+            marketplace_fee = abs(taxa_venda)
+
+            shipping_cost = 0.0
+            other_cost = 0.0
+            discount = 0.0
+
+            cur.execute("SELECT id FROM products WHERE sku = ?", (sku,))
+            prod = cur.fetchone()
+
+            if prod:
+                product_id = prod["id"]
+            else:
+                nome_prod = sku
+                variable_cost = 0.0
+                default_price = preco_unitario
+                cur.execute(
+                    "INSERT INTO products (name, sku, variable_cost, default_price) VALUES (?, ?, ?, ?)",
+                    (nome_prod, sku, variable_cost, default_price),
+                )
+                product_id = cur.lastrowid
+
+            cur.execute(
+                """
+                INSERT INTO sales (
+                    product_id, date, quantity, unit_price,
+                    marketplace_fee, shipping_cost, other_variable_cost, discount
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    product_id,
+                    data,
+                    quantidade,
+                    preco_unitario,
+                    marketplace_fee,
+                    shipping_cost,
+                    other_cost,
+                    discount,
+                ),
+            )
+            importados += 1
+        except Exception:
+            erros += 1
+            continue
+
+    conn.commit()
+    conn.close()
+
+    if importados:
+        flash(
+            f"Importação concluída. Vendas importadas: {importados}. Linhas com erro: {erros}.",
+            "success",
+        )
+    else:
+        flash("Nenhuma venda foi importada. Verifique o arquivo.", "error")
+
+    return redirect(url_for("listar_vendas"))
 
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 <section class="card">
-  <h2>Lançar venda</h2>
+  <h2>Lançar venda manualmente</h2>
   <form class="form-grid" method="post" action="{{ url_for('criar_venda') }}">
     <label>Produto
       <select name="product_id" required>
@@ -34,6 +34,9 @@
     </label>
     <button type="submit" class="btn-primary full-width">Salvar venda</button>
   </form>
+  <p class="hint" style="margin-top:8px;">
+    Dica: para grandes volumes de vendas do Mercado Livre, use a aba <strong>Importar</strong> no menu.
+  </p>
 </section>
 
 <section class="card">
